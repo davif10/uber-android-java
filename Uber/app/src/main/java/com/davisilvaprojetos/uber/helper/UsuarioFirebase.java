@@ -5,7 +5,7 @@ import android.content.Intent;
 
 import androidx.annotation.NonNull;
 
-import com.davisilvaprojetos.uber.activity.MapsActivity;
+import com.davisilvaprojetos.uber.activity.PassageiroActivity;
 import com.davisilvaprojetos.uber.activity.RequisicoesActivity;
 import com.davisilvaprojetos.uber.config.ConfiguracaoFirebase;
 import com.davisilvaprojetos.uber.model.Usuario;
@@ -64,7 +64,7 @@ public class UsuarioFirebase {
                     if(tipoUsuario.equals("M")){
                         activity.startActivity(new Intent(activity, RequisicoesActivity.class));
                     }else{
-                        activity.startActivity(new Intent(activity, MapsActivity.class));
+                        activity.startActivity(new Intent(activity, PassageiroActivity.class));
                     }
                 }
 
