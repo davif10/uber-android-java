@@ -75,10 +75,8 @@ public class PassageiroActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_passageiro);
-
-        //Configuracoes iniciais
-        firebaseRef = ConfiguracaoFirebase.getFirebaseDatabase();
         inicializarComponentes();
+
         //Adiciona listener para status da requisição
         verificarStatusRequisicao();
 
@@ -99,14 +97,17 @@ public class PassageiroActivity extends AppCompatActivity
                 }
 
                 Collections.reverse(lista);
-                requisicao = lista.get(0);
-                switch (requisicao.getStatus()){
-                    case Requisicao.STATUS_AGUARDANDO:
-                        linearLayoutDestino.setVisibility(View.GONE);
-                        buttonChamarUber.setText("Cancelar Uber");
-                        uberChamado = true;
-                        break;
+                if(lista!=null && lista.size() >0){
+                    requisicao = lista.get(0);
+                    switch (requisicao.getStatus()){
+                        case Requisicao.STATUS_AGUARDANDO:
+                            linearLayoutDestino.setVisibility(View.GONE);
+                            buttonChamarUber.setText("Cancelar Uber");
+                            uberChamado = true;
+                            break;
+                    }
                 }
+
 
             }
 
@@ -276,6 +277,7 @@ public class PassageiroActivity extends AppCompatActivity
         buttonChamarUber = findViewById(R.id.buttonChamarUber);
         //Configuracoes iniciais
         autenticacao = ConfiguracaoFirebase.getFirebaseAutenticacao();
+        firebaseRef = ConfiguracaoFirebase.getFirebaseDatabase();
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
