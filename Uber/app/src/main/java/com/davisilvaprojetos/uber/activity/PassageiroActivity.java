@@ -32,6 +32,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -82,7 +83,7 @@ public class PassageiroActivity extends AppCompatActivity
 
     }
 
-    private void verificarStatusRequisicao(){
+    private void verificarStatusRequisicao() {
         Usuario usuarioLogado = UsuarioFirebase.getDadosUsuarioLogado();
         DatabaseReference requisicoes = firebaseRef.child("requisicoes");
         Query requisicaoPesquisa = requisicoes.orderByChild("passageiro/id")
@@ -90,16 +91,16 @@ public class PassageiroActivity extends AppCompatActivity
         requisicaoPesquisa.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                List<Requisicao>lista = new ArrayList<>();
-                for(DataSnapshot ds : snapshot.getChildren()){
+                List<Requisicao> lista = new ArrayList<>();
+                for (DataSnapshot ds : snapshot.getChildren()) {
                     lista.add(ds.getValue(Requisicao.class));
 
                 }
 
                 Collections.reverse(lista);
-                if(lista!=null && lista.size() >0){
+                if (lista != null && lista.size() > 0) {
                     requisicao = lista.get(0);
-                    switch (requisicao.getStatus()){
+                    switch (requisicao.getStatus()) {
                         case Requisicao.STATUS_AGUARDANDO:
                             linearLayoutDestino.setVisibility(View.GONE);
                             buttonChamarUber.setText("Cancelar Uber");
@@ -127,13 +128,13 @@ public class PassageiroActivity extends AppCompatActivity
 
     public void chamarUber(View view) {
 
-        if(!uberChamado){//Uber não foi chamado
+        if (!uberChamado) {//Uber não foi chamado
             //Inicio
             String enderecoDestino = editDestino.getText().toString();
             if (!enderecoDestino.equals("") || enderecoDestino != null) {
 
                 Address addressDestino = recuperarEndereco(enderecoDestino);
-                if(addressDestino!=null){
+                if (addressDestino != null) {
                     Destino destino = new Destino();
                     destino.setCidade(addressDestino.getAdminArea());
                     destino.setCep(addressDestino.getPostalCode());
@@ -144,13 +145,13 @@ public class PassageiroActivity extends AppCompatActivity
                     destino.setLongitude(String.valueOf(addressDestino.getLongitude()));
 
                     StringBuilder mensagem = new StringBuilder();
-                    mensagem.append("Cidade: "+destino.getCidade());
-                    mensagem.append("\nRua: "+destino.getRua());
-                    mensagem.append("\nBairro: "+destino.getBairro());
-                    mensagem.append("\nNúmero: "+destino.getNumero());
-                    mensagem.append("\nCep: "+destino.getCep());
+                    mensagem.append("Cidade: " + destino.getCidade());
+                    mensagem.append("\nRua: " + destino.getRua());
+                    mensagem.append("\nBairro: " + destino.getBairro());
+                    mensagem.append("\nNúmero: " + destino.getNumero());
+                    mensagem.append("\nCep: " + destino.getCep());
 
-                    AlertDialog.Builder builder= new AlertDialog.Builder(this)
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this)
                             .setTitle("Confirme seu endereço!")
                             .setMessage(mensagem)
                             .setPositiveButton("Confirmar", new DialogInterface.OnClickListener() {
@@ -176,14 +177,14 @@ public class PassageiroActivity extends AppCompatActivity
             }
             //Fim
 
-        }else{
+        } else {
             //Cancelar a requisição
-                uberChamado = false;
+            uberChamado = false;
         }
 
     }
 
-    private void salvarRequisicao(Destino destino){
+    private void salvarRequisicao(Destino destino) {
         Requisicao requisicao = new Requisicao();
         requisicao.setDestino(destino);
 
@@ -199,14 +200,14 @@ public class PassageiroActivity extends AppCompatActivity
         buttonChamarUber.setText("Cancelar Uber");
     }
 
-    private Address recuperarEndereco(String endereco){
+    private Address recuperarEndereco(String endereco) {
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
         try {
-            List<Address> listaEnderecos = geocoder.getFromLocationName(endereco,1);
-            if(listaEnderecos != null && listaEnderecos.size() > 0){
+            List<Address> listaEnderecos = geocoder.getFromLocationName(endereco, 1);
+            if (listaEnderecos != null && listaEnderecos.size() > 0) {
                 Address address = listaEnderecos.get(0);
 
-                return  address;
+                return address;
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -215,36 +216,43 @@ public class PassageiroActivity extends AppCompatActivity
     }
 
     private void recuperarLocalizacaoUsuario() {
+        try {
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+            locationListener = new LocationListener() {
+                @Override
+                public void onLocationChanged(@NonNull Location location) {
+                    //Recuperar latitude e longitude
+                    double latitude = location.getLatitude();
+                    double longitude = location.getLongitude();
+                    localPassageiro = new LatLng(latitude, longitude);
+                    mMap.clear();
+                    mMap.addMarker(
+                            new MarkerOptions()
+                                    .position(localPassageiro)
+                                    .title("Meu local")
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
+                    );
+                    mMap.moveCamera(
+                            CameraUpdateFactory.newLatLngZoom(localPassageiro, 20)
+                    );
+                }
 
-        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
-                //Recuperar latitude e longitude
-                double latitude = location.getLatitude();
-                double longitude = location.getLongitude();
-                localPassageiro = new LatLng(latitude, longitude);
-                mMap.clear();
-                mMap.addMarker(
-                        new MarkerOptions()
-                                .position(localPassageiro)
-                                .title("Meu local")
-                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
-                );
-                mMap.moveCamera(
-                        CameraUpdateFactory.newLatLngZoom(localPassageiro, 20)
+            };
+
+            //Solicitar atualizações de localização
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        10000,
+                        10,
+                        locationListener
                 );
             }
-        };
 
-        //Solicitar atualizações de localização
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    10000,
-                    10,
-                    locationListener
-            );
+        } catch (AbstractMethodError e) {
+            System.out.println("Erro: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Erro: " + e.getMessage());
         }
 
     }

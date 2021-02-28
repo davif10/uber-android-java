@@ -46,7 +46,7 @@ public class RequisicoesActivity extends AppCompatActivity {
     private TextView textResultado;
     private FirebaseAuth autenticacao;
     private DatabaseReference firebaseRef;
-    private List<Requisicao>listaRequisicoes = new ArrayList<>();
+    private List<Requisicao> listaRequisicoes = new ArrayList<>();
     private RequisicoesAdapter adapter;
     private Usuario motorista;
     private LocationManager locationManager;
@@ -62,33 +62,72 @@ public class RequisicoesActivity extends AppCompatActivity {
         recuperarLocalizacaoUsuario();
     }
 
-    private void recuperarLocalizacaoUsuario() {
+    @Override
+    protected void onStart() {
+        super.onStart();
+        verificaStatusRequisicao();
+    }
 
-        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        locationListener = new LocationListener() {
+    private void verificaStatusRequisicao(){
+        Usuario usuarioLogado = UsuarioFirebase.getDadosUsuarioLogado();
+        DatabaseReference firebaseRef = ConfiguracaoFirebase.getFirebaseDatabase();
+        DatabaseReference requisicoes = firebaseRef.child("requisicoes");
+
+        Query requisicoesPesquisa = requisicoes.orderByChild("motorista/id")
+                .equalTo(usuarioLogado.getId());
+        requisicoesPesquisa.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onLocationChanged(@NonNull Location location) {
-                //Recuperar latitude e longitude
-                String latitude = String.valueOf(location.getLatitude());
-                String longitude = String.valueOf(location.getLongitude());
-                if(!latitude.isEmpty() && !longitude.isEmpty()){
-                    motorista.setLatitude(latitude);
-                    motorista.setLongitude(longitude);
-                    locationManager.removeUpdates(locationListener);
-                    adapter.notifyDataSetChanged();
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot ds: snapshot.getChildren()){
+                    Requisicao requisicao = ds.getValue(Requisicao.class);
+                    if(requisicao.getStatus().equals(Requisicao.STATUS_A_CAMINHO)
+                    || requisicao.getStatus().equals(Requisicao.STATUS_VIAGEM)){
+                        abrirTelaCorrida(requisicao.getId(), motorista, true);
+                    }
                 }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
 
             }
-        };
+        });
+    }
 
-        //Solicitar atualizações de localização
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    0,
-                    0,
-                    locationListener
-            );
+    private void recuperarLocalizacaoUsuario() {
+        try{
+
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+            locationListener = new LocationListener() {
+                @Override
+                public void onLocationChanged(@NonNull Location location) {
+                    //Recuperar latitude e longitude
+                    String latitude = String.valueOf(location.getLatitude());
+                    String longitude = String.valueOf(location.getLongitude());
+                    if(!latitude.isEmpty() && !longitude.isEmpty()){
+                        motorista.setLatitude(latitude);
+                        motorista.setLongitude(longitude);
+                        locationManager.removeUpdates(locationListener);
+                        adapter.notifyDataSetChanged();
+                    }
+
+                }
+            };
+
+            //Solicitar atualizações de localização
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        0,
+                        0,
+                        locationListener
+                );
+            }
+
+        }catch (AbstractMethodError e){
+            System.out.println("Erro: "+ e.getMessage());
+        }catch (Exception e){
+            System.out.println("ERRO: "+ e.getMessage());
         }
 
     }
@@ -109,6 +148,14 @@ public class RequisicoesActivity extends AppCompatActivity {
                 break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void abrirTelaCorrida(String idRequisicao, Usuario motorista, boolean requisicaoAtiva){
+        Intent i = new Intent(RequisicoesActivity.this, CorridaActivity.class);
+        i.putExtra("idRequisicao", idRequisicao);
+        i.putExtra("motorista", motorista);
+        i.putExtra("requisicaoAtiva", requisicaoAtiva);
+        startActivity(i);
     }
 
     private void inicializarComponentes() {
@@ -134,10 +181,8 @@ public class RequisicoesActivity extends AppCompatActivity {
             @Override
             public void onItemClick(View view, int position) {
                 Requisicao requisicao = listaRequisicoes.get(position);
-                Intent i = new Intent(RequisicoesActivity.this, CorridaActivity.class);
-                i.putExtra("idRequisicao", requisicao.getId());
-                i.putExtra("motorista", motorista);
-                startActivity(i);
+                abrirTelaCorrida(requisicao.getId(), motorista, false);
+
             }
 
             @Override
