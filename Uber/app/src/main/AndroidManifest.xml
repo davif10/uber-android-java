@@ -19,6 +19,7 @@
         <activity
             android:name=".activity.CorridaActivity"
             android:label="@string/title_activity_corrida"
+            android:theme="@style/Theme.Uber.NoActionBar"
             android:parentActivityName=".activity.RequisicoesActivity"></activity>
         <activity
             android:name=".activity.PassageiroActivity"

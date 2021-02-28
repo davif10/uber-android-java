@@ -169,7 +169,7 @@ public class RequisicoesActivity extends AppCompatActivity {
                     textResultado.setVisibility(View.VISIBLE);
                     recyclerRequisicoes.setVisibility(View.GONE);
                 }
-
+                listaRequisicoes.clear();
                 for (DataSnapshot ds: snapshot.getChildren()){
                     Requisicao requisicao = ds.getValue(Requisicao.class);
                     listaRequisicoes.add(requisicao);
