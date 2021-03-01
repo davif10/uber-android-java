@@ -58,6 +58,14 @@ import java.util.Locale;
 public class PassageiroActivity extends AppCompatActivity
         implements OnMapReadyCallback {
 
+    /*
+        Lat/Lon destino: -23.553992025417333, -46.652691603340635  (R. Frei Caneca, 569 - Consolação, São Paulo - SP, 01307-001)
+        Lat/Lon passageiro ex:-23.55891853627467, -46.65934180861356
+        Lat/Lon motorista(a caminho)
+        Inicial: -23.563609548396446, -46.653730627810134
+        Intermediária : -23.56310800163784, -46.65433144258068
+        Final : -23.560187191295604, -46.65771102566495
+     */
     private GoogleMap mMap;
     private FirebaseAuth autenticacao;
     private LocationManager locationManager;
@@ -225,6 +233,9 @@ public class PassageiroActivity extends AppCompatActivity
                     double latitude = location.getLatitude();
                     double longitude = location.getLongitude();
                     localPassageiro = new LatLng(latitude, longitude);
+                    //Atualizar Geofire
+                    UsuarioFirebase.atualizarDadosLocalizacao(latitude,longitude);
+
                     mMap.clear();
                     mMap.addMarker(
                             new MarkerOptions()

@@ -10,6 +10,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 
 import com.davisilvaprojetos.uber.config.ConfiguracaoFirebase;
+import com.davisilvaprojetos.uber.helper.UsuarioFirebase;
 import com.davisilvaprojetos.uber.model.Requisicao;
 import com.davisilvaprojetos.uber.model.Usuario;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -120,6 +121,13 @@ public class CorridaActivity extends AppCompatActivity
 
     private void requisicaoAguardando(){
         buttonAceitarCorrida.setText("Aceitar corrida");
+
+        //Exibe marcador do motorista
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
+        mMap.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(localMotorista,20)
+        );
+
     }
 
     private void requisicaoACaminho(){
@@ -206,6 +214,8 @@ public class CorridaActivity extends AppCompatActivity
                     double latitude = location.getLatitude();
                     double longitude = location.getLongitude();
                     localMotorista = new LatLng(latitude, longitude);
+                    //Atualizar Geofire
+                    UsuarioFirebase.atualizarDadosLocalizacao(latitude,longitude);
 
                     alteraInterfaceStatusRequisicao(statusRequisicao);
 

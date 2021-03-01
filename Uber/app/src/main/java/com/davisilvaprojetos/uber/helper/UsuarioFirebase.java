@@ -9,6 +9,8 @@ import com.davisilvaprojetos.uber.activity.PassageiroActivity;
 import com.davisilvaprojetos.uber.activity.RequisicoesActivity;
 import com.davisilvaprojetos.uber.config.ConfiguracaoFirebase;
 import com.davisilvaprojetos.uber.model.Usuario;
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
@@ -84,6 +86,29 @@ public class UsuarioFirebase {
             });
         }
 
+    }
+    public static void atualizarDadosLocalizacao(double lat, double lon){
+
+        //Define nó de local do usuário
+        DatabaseReference localUsuario = ConfiguracaoFirebase.getFirebaseDatabase()
+                .child("local_usuario");
+        GeoFire geoFire = new GeoFire(localUsuario);
+
+        //Recupera dados usuario logado
+        Usuario usuarioLogado = UsuarioFirebase.getDadosUsuarioLogado();
+        //Configura localização do usuário
+        geoFire.setLocation(
+                usuarioLogado.getId(),
+                new GeoLocation(lat, lon),
+                new GeoFire.CompletionListener() {
+                    @Override
+                    public void onComplete(String key, DatabaseError error) {
+                        if(error!=null){
+                            System.out.println("Erro ao salvar local!");
+                        }
+                    }
+                }
+        );
     }
 
     public static  String getIdentificadorUsuario(){
