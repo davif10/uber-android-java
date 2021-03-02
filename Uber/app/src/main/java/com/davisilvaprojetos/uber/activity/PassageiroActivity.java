@@ -65,6 +65,8 @@ public class PassageiroActivity extends AppCompatActivity
         Inicial: -23.563609548396446, -46.653730627810134
         Intermediária : -23.56310800163784, -46.65433144258068
         Final : -23.560187191295604, -46.65771102566495
+        Encerramento intermediário: -23.55434895805354, -46.65435381665237
+        Encerramento da corrida: -23.553602563131726, -46.65276969812975
      */
     private GoogleMap mMap;
     private FirebaseAuth autenticacao;

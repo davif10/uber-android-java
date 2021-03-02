@@ -82,6 +82,7 @@ public class RequisicoesActivity extends AppCompatActivity {
                     Requisicao requisicao = ds.getValue(Requisicao.class);
                     if(requisicao.getStatus().equals(Requisicao.STATUS_A_CAMINHO)
                     || requisicao.getStatus().equals(Requisicao.STATUS_VIAGEM)){
+                        motorista = requisicao.getMotorista();
                         abrirTelaCorrida(requisicao.getId(), motorista, true);
                     }
                 }
@@ -110,6 +111,8 @@ public class RequisicoesActivity extends AppCompatActivity {
                     if(!latitude.isEmpty() && !longitude.isEmpty()){
                         motorista.setLatitude(latitude);
                         motorista.setLongitude(longitude);
+
+                        adicionaEventoCliqueRecyclerView();
                         locationManager.removeUpdates(locationListener);
                         adapter.notifyDataSetChanged();
                     }
@@ -177,29 +180,34 @@ public class RequisicoesActivity extends AppCompatActivity {
         recyclerRequisicoes.setHasFixedSize(true);
         recyclerRequisicoes.setAdapter(adapter);
 
+
+
+        recuperarRequisicoes();
+    }
+
+    private void adicionaEventoCliqueRecyclerView(){
+
         //Adiciona evento de clique no RecyclerView
         recyclerRequisicoes.addOnItemTouchListener(new RecyclerItemClickListener(getApplicationContext(),
                 recyclerRequisicoes,
                 new RecyclerItemClickListener.OnItemClickListener() {
-            @Override
-            public void onItemClick(View view, int position) {
-                Requisicao requisicao = listaRequisicoes.get(position);
-                abrirTelaCorrida(requisicao.getId(), motorista, false);
+                    @Override
+                    public void onItemClick(View view, int position) {
+                        Requisicao requisicao = listaRequisicoes.get(position);
+                        abrirTelaCorrida(requisicao.getId(), motorista, false);
 
-            }
+                    }
 
-            @Override
-            public void onLongItemClick(View view, int position) {
+                    @Override
+                    public void onLongItemClick(View view, int position) {
 
-            }
+                    }
 
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-            }
-        }));
-
-        recuperarRequisicoes();
+                    }
+                }));
     }
 
     private void recuperarRequisicoes(){
