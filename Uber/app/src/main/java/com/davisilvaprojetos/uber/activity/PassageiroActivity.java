@@ -12,6 +12,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 
 import com.davisilvaprojetos.uber.config.ConfiguracaoFirebase;
+import com.davisilvaprojetos.uber.helper.Local;
 import com.davisilvaprojetos.uber.helper.UsuarioFirebase;
 import com.davisilvaprojetos.uber.model.Destino;
 import com.davisilvaprojetos.uber.model.Requisicao;
@@ -22,6 +23,8 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
@@ -50,6 +53,7 @@ import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -80,6 +84,14 @@ public class PassageiroActivity extends AppCompatActivity
     private boolean uberChamado = false;
     private DatabaseReference firebaseRef;
     private Requisicao requisicao;
+    private Usuario passageiro;
+    private String statusRequisicao;
+    private Destino destino;
+    private Marker marcadorMotorista;
+    private Marker marcadorPassageiro;
+    private Marker marcadorDestino;
+    private Usuario motorista;
+    private LatLng localMotorista;
 
 
     @Override
@@ -110,13 +122,26 @@ public class PassageiroActivity extends AppCompatActivity
                 Collections.reverse(lista);
                 if (lista != null && lista.size() > 0) {
                     requisicao = lista.get(0);
-                    switch (requisicao.getStatus()) {
-                        case Requisicao.STATUS_AGUARDANDO:
-                            linearLayoutDestino.setVisibility(View.GONE);
-                            buttonChamarUber.setText("Cancelar Uber");
-                            uberChamado = true;
-                            break;
+
+                    if (requisicao != null) {
+                        passageiro = requisicao.getPassageiro();
+                        localPassageiro = new LatLng(
+                                Double.parseDouble(passageiro.getLatitude()),
+                                Double.parseDouble(passageiro.getLongitude())
+                        );
+                        statusRequisicao = requisicao.getStatus();
+                        destino = requisicao.getDestino();
+                        if (requisicao.getMotorista() != null) {
+                            motorista = requisicao.getMotorista();
+                            localMotorista = new LatLng(
+                                    Double.parseDouble(motorista.getLatitude()),
+                                    Double.parseDouble(motorista.getLongitude())
+                            );
+                        }
+                        alteraInterfaceStatusRequisicao(statusRequisicao);
                     }
+
+
                 }
 
 
@@ -127,6 +152,158 @@ public class PassageiroActivity extends AppCompatActivity
 
             }
         });
+    }
+
+    private void alteraInterfaceStatusRequisicao(String status) {
+        if (status != null && !status.isEmpty()) {
+            switch (status) {
+                case Requisicao.STATUS_AGUARDANDO:
+                    requisicaoAguardando();
+                    break;
+                case Requisicao.STATUS_A_CAMINHO:
+                    requisicaoACaminho();
+                    break;
+                case Requisicao.STATUS_VIAGEM:
+                    requisicaoViagem();
+                    break;
+                case Requisicao.STATUS_FINALIZADA:
+                    requisicaoFinalizada();
+                    break;
+            }
+        }
+
+    }
+
+    private void requisicaoAguardando() {
+        linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setText("Cancelar Uber");
+        uberChamado = true;
+
+        //Adiciona marcador de passageiro
+        adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
+        centralizarMarcador(localPassageiro);
+    }
+
+    private void requisicaoACaminho() {
+
+        linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setText("Motorista a caminho");
+        uberChamado = true;
+
+        //adiciona marcador do passageiro
+        adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
+
+        //Exibe marcador do motorista
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
+
+        //Centralizar motorista e passageiro
+        centralizarDoisMarcadores(marcadorMotorista, marcadorPassageiro);
+    }
+
+    private void requisicaoViagem() {
+        linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setText("A caminho do destino");
+
+        //Exibe marcador do motorista
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
+
+        //adicionar marcador destino
+        LatLng localDestino = new LatLng(
+                Double.parseDouble(destino.getLatitude()),
+                Double.parseDouble(destino.getLongitude())
+        );
+        adicionaMarcadorDestino(localDestino, "Destino");
+
+        //Centralizar marcadores de motorista / destino
+        centralizarDoisMarcadores(marcadorMotorista, marcadorDestino);
+
+    }
+
+    private void requisicaoFinalizada() {
+        linearLayoutDestino.setVisibility(View.GONE);
+
+        //adicionar marcador destino
+        LatLng localDestino = new LatLng(
+                Double.parseDouble(destino.getLatitude()),
+                Double.parseDouble(destino.getLongitude())
+        );
+        adicionaMarcadorDestino(localDestino, "Destino");
+        centralizarMarcador(localDestino);
+
+        //Calcular distância
+        float distancia = Local.calcularDistancia(localPassageiro, localDestino);
+        float valor = distancia * 5; //5 Reais o KM percorrido
+        DecimalFormat decimal = new DecimalFormat("0.00");
+        String resultado = decimal.format(valor);
+
+        buttonChamarUber.setText("Corrida finalizada - R$ "+resultado);
+    }
+
+    private void adicionaMarcadorPassageiro(LatLng localizacao, String titulo) {
+        if (marcadorPassageiro != null) {
+            marcadorPassageiro.remove();
+        }
+
+        marcadorPassageiro = mMap.addMarker(
+                new MarkerOptions()
+                        .position(localizacao)
+                        .title(titulo)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
+        );
+
+    }
+
+    private void adicionaMarcadorMotorista(LatLng localizacao, String titulo) {
+        if (marcadorMotorista != null) {
+            marcadorMotorista.remove();
+        }
+
+        marcadorMotorista = mMap.addMarker(
+                new MarkerOptions()
+                        .position(localizacao)
+                        .title(titulo)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
+        );
+
+    }
+
+    private void adicionaMarcadorDestino(LatLng localizacao, String titulo) {
+        if (marcadorPassageiro != null) {
+            marcadorPassageiro.remove();
+        }
+        if (marcadorDestino != null) {
+            marcadorDestino.remove();
+        }
+
+        marcadorDestino = mMap.addMarker(
+                new MarkerOptions()
+                        .position(localizacao)
+                        .title(titulo)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.destino))
+        );
+
+    }
+
+    private void centralizarMarcador(LatLng local) {
+        mMap.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(local, 20)
+        );
+    }
+
+    private void centralizarDoisMarcadores(Marker marcador1, Marker marcador2) {
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        builder.include(marcador1.getPosition());
+        builder.include(marcador2.getPosition());
+
+        LatLngBounds bounds = builder.build();
+
+        int largura = getResources().getDisplayMetrics().widthPixels;
+        int altura = getResources().getDisplayMetrics().heightPixels;
+        int espacoInterno = (int) (largura * 0.20);
+
+        mMap.moveCamera(
+                CameraUpdateFactory.newLatLngBounds(bounds, largura, altura, espacoInterno)
+        );
     }
 
     @Override
@@ -236,18 +413,18 @@ public class PassageiroActivity extends AppCompatActivity
                     double longitude = location.getLongitude();
                     localPassageiro = new LatLng(latitude, longitude);
                     //Atualizar Geofire
-                    UsuarioFirebase.atualizarDadosLocalizacao(latitude,longitude);
+                    UsuarioFirebase.atualizarDadosLocalizacao(latitude, longitude);
 
-                    mMap.clear();
-                    mMap.addMarker(
-                            new MarkerOptions()
-                                    .position(localPassageiro)
-                                    .title("Meu local")
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
-                    );
-                    mMap.moveCamera(
-                            CameraUpdateFactory.newLatLngZoom(localPassageiro, 20)
-                    );
+                    //Altera interface de acordo com o status
+                    alteraInterfaceStatusRequisicao(statusRequisicao);
+
+                    if (statusRequisicao != null && !statusRequisicao.isEmpty()) {
+                        if (statusRequisicao.equals(Requisicao.STATUS_VIAGEM)
+                                || statusRequisicao.equals(Requisicao.STATUS_FINALIZADA)) {
+                            locationManager.removeUpdates(locationListener);
+                        }
+                    }
+
                 }
 
             };
