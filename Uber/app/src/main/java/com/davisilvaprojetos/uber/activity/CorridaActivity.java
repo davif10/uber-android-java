@@ -141,8 +141,17 @@ public class CorridaActivity extends AppCompatActivity
             case Requisicao.STATUS_FINALIZADA:
                 requisicaoFinalizada();
                 break;
+            case Requisicao.STATUS_CANCELADA:
+                requisicaoCancelada();
+                break;
         }
     }
+
+    private void requisicaoCancelada(){
+        Toast.makeText(this, "Requisição foi cancelada pelo passageiro!", Toast.LENGTH_SHORT).show();
+        startActivity(new Intent(CorridaActivity.this, RequisicoesActivity.class));
+    }
+
     private void requisicaoFinalizada(){
         fabRota.setVisibility(View.GONE);
         requisicaoAtiva = false;
@@ -373,7 +382,7 @@ public class CorridaActivity extends AppCompatActivity
 
                     //Atualizar localização no Firebase
                     motorista.setLatitude(String.valueOf(latitude));
-                    motorista.setLatitude(String.valueOf(longitude));
+                    motorista.setLongitude(String.valueOf(longitude));
                     requisicao.setMotorista(motorista);
                     requisicao.atualizarLocalizacaoMotorista();
                     alteraInterfaceStatusRequisicao(statusRequisicao);
@@ -455,6 +464,11 @@ public class CorridaActivity extends AppCompatActivity
         } else {
             Intent i = new Intent(CorridaActivity.this, RequisicoesActivity.class);
             startActivity(i);
+        }
+        //Verificar o status da requisição para encerrar
+        if(statusRequisicao != null && !statusRequisicao.isEmpty()){
+            requisicao.setStatus(Requisicao.STATUS_ENCERRADA);
+            requisicao.atualizarStatus();
         }
         return false;
     }

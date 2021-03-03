@@ -3,6 +3,7 @@ package com.davisilvaprojetos.uber.activity;
 import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -81,7 +82,7 @@ public class PassageiroActivity extends AppCompatActivity
     private EditText editDestino;
     private LinearLayout linearLayoutDestino;
     private Button buttonChamarUber;
-    private boolean uberChamado = false;
+    private boolean cancelarUber = false;
     private DatabaseReference firebaseRef;
     private Requisicao requisicao;
     private Usuario passageiro;
@@ -124,21 +125,23 @@ public class PassageiroActivity extends AppCompatActivity
                     requisicao = lista.get(0);
 
                     if (requisicao != null) {
-                        passageiro = requisicao.getPassageiro();
-                        localPassageiro = new LatLng(
-                                Double.parseDouble(passageiro.getLatitude()),
-                                Double.parseDouble(passageiro.getLongitude())
-                        );
-                        statusRequisicao = requisicao.getStatus();
-                        destino = requisicao.getDestino();
-                        if (requisicao.getMotorista() != null) {
-                            motorista = requisicao.getMotorista();
-                            localMotorista = new LatLng(
-                                    Double.parseDouble(motorista.getLatitude()),
-                                    Double.parseDouble(motorista.getLongitude())
+                        if (!requisicao.getStatus().equals(Requisicao.STATUS_ENCERRADA)) {
+                            passageiro = requisicao.getPassageiro();
+                            localPassageiro = new LatLng(
+                                    Double.parseDouble(passageiro.getLatitude()),
+                                    Double.parseDouble(passageiro.getLongitude())
                             );
+                            statusRequisicao = requisicao.getStatus();
+                            destino = requisicao.getDestino();
+                            if (requisicao.getMotorista() != null) {
+                                motorista = requisicao.getMotorista();
+                                localMotorista = new LatLng(
+                                        Double.parseDouble(motorista.getLatitude()),
+                                        Double.parseDouble(motorista.getLongitude())
+                                );
+                            }
+                            alteraInterfaceStatusRequisicao(statusRequisicao);
                         }
-                        alteraInterfaceStatusRequisicao(statusRequisicao);
                     }
 
 
@@ -156,6 +159,7 @@ public class PassageiroActivity extends AppCompatActivity
 
     private void alteraInterfaceStatusRequisicao(String status) {
         if (status != null && !status.isEmpty()) {
+            cancelarUber = false;
             switch (status) {
                 case Requisicao.STATUS_AGUARDANDO:
                     requisicaoAguardando();
@@ -169,15 +173,28 @@ public class PassageiroActivity extends AppCompatActivity
                 case Requisicao.STATUS_FINALIZADA:
                     requisicaoFinalizada();
                     break;
+                case Requisicao.STATUS_CANCELADA:
+                    requisicaoCancelada();
+                    break;
             }
+        } else {
+            //Adiciona marcador passageiro
+            adicionaMarcadorPassageiro(localPassageiro, "Seu local");
+            centralizarMarcador(localPassageiro);
         }
 
+    }
+
+    private void requisicaoCancelada(){
+        linearLayoutDestino.setVisibility(View.VISIBLE);
+        buttonChamarUber.setText("Chamar Uber");
+        cancelarUber = false;
     }
 
     private void requisicaoAguardando() {
         linearLayoutDestino.setVisibility(View.GONE);
         buttonChamarUber.setText("Cancelar Uber");
-        uberChamado = true;
+        cancelarUber = true;
 
         //Adiciona marcador de passageiro
         adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
@@ -188,7 +205,7 @@ public class PassageiroActivity extends AppCompatActivity
 
         linearLayoutDestino.setVisibility(View.GONE);
         buttonChamarUber.setText("Motorista a caminho");
-        uberChamado = true;
+        buttonChamarUber.setEnabled(false);
 
         //adiciona marcador do passageiro
         adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
@@ -203,6 +220,7 @@ public class PassageiroActivity extends AppCompatActivity
     private void requisicaoViagem() {
         linearLayoutDestino.setVisibility(View.GONE);
         buttonChamarUber.setText("A caminho do destino");
+        buttonChamarUber.setEnabled(false);
 
         //Exibe marcador do motorista
         adicionaMarcadorMotorista(localMotorista, motorista.getNome());
@@ -221,6 +239,7 @@ public class PassageiroActivity extends AppCompatActivity
 
     private void requisicaoFinalizada() {
         linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setEnabled(false);
 
         //adicionar marcador destino
         LatLng localDestino = new LatLng(
@@ -236,7 +255,25 @@ public class PassageiroActivity extends AppCompatActivity
         DecimalFormat decimal = new DecimalFormat("0.00");
         String resultado = decimal.format(valor);
 
-        buttonChamarUber.setText("Corrida finalizada - R$ "+resultado);
+        buttonChamarUber.setText("Corrida finalizada - R$ " + resultado);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("Total da viagem")
+                .setMessage("Sua viagem ficou: R$ " + resultado)
+                .setCancelable(false)
+                .setNegativeButton("Encerrar viagem ", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        requisicao.setStatus(Requisicao.STATUS_ENCERRADA);
+                        requisicao.atualizarStatus();
+
+                        finish();
+                        startActivity(new Intent(getIntent()));
+                    }
+                });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void adicionaMarcadorPassageiro(LatLng localizacao, String titulo) {
@@ -314,9 +351,15 @@ public class PassageiroActivity extends AppCompatActivity
     }
 
     public void chamarUber(View view) {
+        //False - Uber não pode ser cancelado ainda
+        //True - Uber pode ser cancelado
 
-        if (!uberChamado) {//Uber não foi chamado
-            //Inicio
+        if (cancelarUber) {//Uber  pode ser cancelado
+            //Cancelar a requisição
+            requisicao.setStatus(Requisicao.STATUS_CANCELADA);
+            requisicao.atualizarStatus();
+
+        } else {
             String enderecoDestino = editDestino.getText().toString();
             if (!enderecoDestino.equals("") || enderecoDestino != null) {
 
@@ -346,7 +389,6 @@ public class PassageiroActivity extends AppCompatActivity
                                 public void onClick(DialogInterface dialog, int which) {
                                     //Salvar requisição
                                     salvarRequisicao(destino);
-                                    uberChamado = true;
                                 }
                             }).setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
                                 @Override
@@ -362,11 +404,6 @@ public class PassageiroActivity extends AppCompatActivity
             } else {
                 Toast.makeText(this, "Informe o endereço de destino", Toast.LENGTH_SHORT).show();
             }
-            //Fim
-
-        } else {
-            //Cancelar a requisição
-            uberChamado = false;
         }
 
     }
@@ -422,6 +459,16 @@ public class PassageiroActivity extends AppCompatActivity
                         if (statusRequisicao.equals(Requisicao.STATUS_VIAGEM)
                                 || statusRequisicao.equals(Requisicao.STATUS_FINALIZADA)) {
                             locationManager.removeUpdates(locationListener);
+                        } else {
+                            //Solicitar atualizações de localização
+                            if (ActivityCompat.checkSelfPermission(PassageiroActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                locationManager.requestLocationUpdates(
+                                        LocationManager.GPS_PROVIDER,
+                                        10000,
+                                        10,
+                                        locationListener
+                                );
+                            }
                         }
                     }
 
