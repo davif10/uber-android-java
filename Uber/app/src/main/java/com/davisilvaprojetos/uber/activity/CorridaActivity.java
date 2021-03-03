@@ -49,6 +49,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.function.DoubleSupplier;
+
 public class CorridaActivity extends AppCompatActivity
         implements OnMapReadyCallback {
 
@@ -134,7 +136,36 @@ public class CorridaActivity extends AppCompatActivity
             case Requisicao.STATUS_VIAGEM:
                 requisicaoViagem();
                 break;
+            case Requisicao.STATUS_FINALIZADA:
+                requisicaoFinalizada();
+                break;
         }
+    }
+    private void requisicaoFinalizada(){
+        fabRota.setVisibility(View.GONE);
+        if (marcadorMotorista != null) {
+            marcadorMotorista.remove();
+        }
+        if (marcadorDestino != null) {
+            marcadorDestino.remove();
+        }
+
+        //Exibe marcador de destino
+        LatLng localDestino = new LatLng(
+                Double.parseDouble(destino.getLatitude()),
+                Double.parseDouble(destino.getLongitude())
+        );
+
+        adicionaMarcadorDestino(localDestino,"Destino");
+        centralizarMarcador(localDestino);
+
+        buttonAceitarCorrida.setText("Corrida finalizada - R$ 20");
+    }
+
+    private void centralizarMarcador(LatLng local){
+        mMap.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(local, 20)
+        );
     }
 
     private void requisicaoAguardando() {
@@ -142,9 +173,7 @@ public class CorridaActivity extends AppCompatActivity
 
         //Exibe marcador do motorista
         adicionaMarcadorMotorista(localMotorista, motorista.getNome());
-        mMap.moveCamera(
-                CameraUpdateFactory.newLatLngZoom(localMotorista, 20)
-        );
+        centralizarMarcador(localMotorista);
 
     }
 
@@ -216,6 +245,7 @@ public class CorridaActivity extends AppCompatActivity
 
                     //Remove listener
                     geoQuery.removeAllListeners();
+                    circulo.remove();
                 }
             }
 

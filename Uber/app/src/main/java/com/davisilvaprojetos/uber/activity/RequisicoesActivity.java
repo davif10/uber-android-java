@@ -68,7 +68,7 @@ public class RequisicoesActivity extends AppCompatActivity {
         verificaStatusRequisicao();
     }
 
-    private void verificaStatusRequisicao(){
+    private void verificaStatusRequisicao() {
         Usuario usuarioLogado = UsuarioFirebase.getDadosUsuarioLogado();
         DatabaseReference firebaseRef = ConfiguracaoFirebase.getFirebaseDatabase();
         DatabaseReference requisicoes = firebaseRef.child("requisicoes");
@@ -78,10 +78,11 @@ public class RequisicoesActivity extends AppCompatActivity {
         requisicoesPesquisa.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot ds: snapshot.getChildren()){
+                for (DataSnapshot ds : snapshot.getChildren()) {
                     Requisicao requisicao = ds.getValue(Requisicao.class);
-                    if(requisicao.getStatus().equals(Requisicao.STATUS_A_CAMINHO)
-                    || requisicao.getStatus().equals(Requisicao.STATUS_VIAGEM)){
+                    if (requisicao.getStatus().equals(Requisicao.STATUS_A_CAMINHO)
+                            || requisicao.getStatus().equals(Requisicao.STATUS_VIAGEM)
+                            || requisicao.getStatus().equals(Requisicao.STATUS_FINALIZADA)) {
                         motorista = requisicao.getMotorista();
                         abrirTelaCorrida(requisicao.getId(), motorista, true);
                     }
@@ -96,7 +97,7 @@ public class RequisicoesActivity extends AppCompatActivity {
     }
 
     private void recuperarLocalizacaoUsuario() {
-        try{
+        try {
 
             locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
             locationListener = new LocationListener() {
@@ -106,9 +107,9 @@ public class RequisicoesActivity extends AppCompatActivity {
                     String latitude = String.valueOf(location.getLatitude());
                     String longitude = String.valueOf(location.getLongitude());
                     //Atualizar Geofire
-                    UsuarioFirebase.atualizarDadosLocalizacao(location.getLatitude(),location.getLongitude());
+                    UsuarioFirebase.atualizarDadosLocalizacao(location.getLatitude(), location.getLongitude());
 
-                    if(!latitude.isEmpty() && !longitude.isEmpty()){
+                    if (!latitude.isEmpty() && !longitude.isEmpty()) {
                         motorista.setLatitude(latitude);
                         motorista.setLongitude(longitude);
 
@@ -130,10 +131,10 @@ public class RequisicoesActivity extends AppCompatActivity {
                 );
             }
 
-        }catch (AbstractMethodError e){
-            System.out.println("Erro: "+ e.getMessage());
-        }catch (Exception e){
-            System.out.println("ERRO: "+ e.getMessage());
+        } catch (AbstractMethodError e) {
+            System.out.println("Erro: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("ERRO: " + e.getMessage());
         }
 
     }
@@ -156,7 +157,7 @@ public class RequisicoesActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void abrirTelaCorrida(String idRequisicao, Usuario motorista, boolean requisicaoAtiva){
+    private void abrirTelaCorrida(String idRequisicao, Usuario motorista, boolean requisicaoAtiva) {
         Intent i = new Intent(RequisicoesActivity.this, CorridaActivity.class);
         i.putExtra("idRequisicao", idRequisicao);
         i.putExtra("motorista", motorista);
@@ -174,18 +175,17 @@ public class RequisicoesActivity extends AppCompatActivity {
         firebaseRef = ConfiguracaoFirebase.getFirebaseDatabase();
 
         //Configurar RecyclerView
-        adapter = new RequisicoesAdapter(listaRequisicoes,getApplicationContext(),motorista);
+        adapter = new RequisicoesAdapter(listaRequisicoes, getApplicationContext(), motorista);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         recyclerRequisicoes.setLayoutManager(layoutManager);
         recyclerRequisicoes.setHasFixedSize(true);
         recyclerRequisicoes.setAdapter(adapter);
 
 
-
         recuperarRequisicoes();
     }
 
-    private void adicionaEventoCliqueRecyclerView(){
+    private void adicionaEventoCliqueRecyclerView() {
 
         //Adiciona evento de clique no RecyclerView
         recyclerRequisicoes.addOnItemTouchListener(new RecyclerItemClickListener(getApplicationContext(),
@@ -210,7 +210,7 @@ public class RequisicoesActivity extends AppCompatActivity {
                 }));
     }
 
-    private void recuperarRequisicoes(){
+    private void recuperarRequisicoes() {
         DatabaseReference requisicoes = firebaseRef.child("requisicoes");
         Query requisicaoPesquisa = requisicoes.orderByChild("status")
                 .equalTo(Requisicao.STATUS_AGUARDANDO);
@@ -218,15 +218,15 @@ public class RequisicoesActivity extends AppCompatActivity {
         requisicaoPesquisa.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if(snapshot.getChildrenCount() > 0){
+                if (snapshot.getChildrenCount() > 0) {
                     textResultado.setVisibility(View.GONE);
                     recyclerRequisicoes.setVisibility(View.VISIBLE);
-                }else{
+                } else {
                     textResultado.setVisibility(View.VISIBLE);
                     recyclerRequisicoes.setVisibility(View.GONE);
                 }
                 listaRequisicoes.clear();
-                for (DataSnapshot ds: snapshot.getChildren()){
+                for (DataSnapshot ds : snapshot.getChildren()) {
                     Requisicao requisicao = ds.getValue(Requisicao.class);
                     listaRequisicoes.add(requisicao);
                 }
